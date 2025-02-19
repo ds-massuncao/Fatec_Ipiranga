@@ -7,6 +7,6 @@ primeiro = int(input('>_ '))
 print('Digite o segundo numero')
 segundo = int(input('>_ '))
 
-subtracao =  primeiro - segundo
+divisao = primeiro / segundo
 
-print(f'A subtracao de {primeiro} - {segundo} = {subtracao}')
+print(f'A divisao de {primeiro} / {segundo} = {divisao}')
