@@ -1,3 +1,6 @@
+# Busca binaria de um telefone
+
+
 def buscaBinaria(contatos, telefone):
     primeiro = 0
     ultimo = len(contatos) - 1
