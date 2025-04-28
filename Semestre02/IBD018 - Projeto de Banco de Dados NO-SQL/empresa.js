@@ -200,8 +200,46 @@ valor_aquisicao: 10250.00 } )
 // $match -> $lookup -> $project -> resultado (pipeline)
 
 // consulta recursiva
+// mostrando os perifericos instalados
+db.equipamento.aggregate(
+[ {$match: { "perifericos_instalados" : {$exists: true } } } ,
+  {$lookup: 
+            { from: "equipamento" ,
+              localField : "perifericos_instalados.patrimonio" ,
+              foreignField: "patrimonio" ,
+              as : "alocação_perifericos"  }  } ,
+  {$project: {_id: 0 , "patrimonio": 1, "modelo": 1 , "tipo_eqpto": 1, 
+              "alocação_perifericos.patrimonio" : 1,
+              "alocação_perifericos.modelo" : 1,
+              "alocação_perifericos.tipo_eqpto" : 1,
+              "alocação_perifericos.caracteristicas.tipo_periferico" : 1  }  }  ]  ) 
+
+// project no find(), não precisa escrever $project
+db.empresa.find({}, {razao_social: 1})
 
 
+// mostrando tambem a empresa fornecedora de cada periferico
 
-
-
+// mostrando também a empresa fabricante de cada periferico 
+db.equipamento.aggregate(
+[ {$match: { "perifericos_instalados" : {$exists: true } } } ,
+   // relaciona com o proprio equipamento que são os perifericos
+  {$lookup: 
+            { from: "equipamento" ,
+              localField : "perifericos_instalados.patrimonio" ,
+              foreignField: "patrimonio" ,
+              as : "alocação_perifericos"  }  } ,
+  { $unwind : "$alocação_perifericos" },
+   // relaciona como fornecedor dos perifericos
+     { $lookup: 
+              { from: "empresa" ,
+              localField : "alocação_perifericos.Fabricante" ,
+              foreignField: "cnpj" ,
+              as : "fabricante_periferico"  }  } ,
+    { $unwind: "$fabricante_periferico" }, 
+    {$project: {_id: 0 , "patrimonio": 1, "modelo": 1 , "tipo_eqpto": 1, 
+              "alocação_perifericos.patrimonio" : 1,
+              "alocação_perifericos.modelo" : 1,
+              "alocação_perifericos.tipo_eqpto" : 1,
+              "alocação_perifericos.caracteristicas.tipo_periferico" : 1 ,
+               "fabricante_periferico.razao_social" : 1 }  }  ]  ) 
