@@ -1,3 +1,5 @@
+// https://dontpad.com/guardado_bigdata/bd2_filmes_2025
+
 /*******************************************/
 /****** Aula 05/maio - Importação e funções de grupo *****/
 // Método 1 - Para importar dados no MongoDB Compass, seguir os seguintes passos:
@@ -125,3 +127,64 @@ db.teste.aggregate( [
                                              unit: "hour",
                                              amount: 2 } } } } ] ) 
 
+// Funções de grupo ou agregação -> GROUP BY
+// $count , $sum , $avg, $max, $min 
+// count -> contagem
+db.movie.count()
+db.movie.find().count()
+db.movie.aggregate(
+    {$group : {_id: {}, 
+                contagem : {$count:{} } } } )
+
+// contagem com criterio >= 
+// db.movie: Refere-se à coleção chamada movie no banco de dados atual do MongoDB.
+// .count(...): Esta função retorna o número de documentos que satisfazem o critério especificado.
+// {duracao: {$gte: 120}}: Este é o critério de busca. Ele procura por documentos em que o campo duracao (provavelmente a duração de um filme) seja maior ou igual a 120.
+db.movie.count({duracao: {$gte: 120}})
+
+// group by -- ordenado na descrescente -1 ; ascendente 1
+db.movie.aggregate(
+    {$group : {_id: {duracao_min: "$duracao"} , 
+                contagem : {$count:{} } } } ,
+                { $sort: {contagem: -1} } )
+// qtde de filmes por país
+db.movie.aggregate(
+    {$group : {_id: {país: "$countries"} , 
+                contagem : {$count:{} } } } ,
+                { $sort: {contagem: -1} } )
+
+// qtde de filmes por país -- retirar os elementos do vetor
+db.movie.aggregate(
+    { $unwind: "$countries"} ,
+    {$group : {_id: {país: "$countries"} , 
+                contagem : {$count:{} } } } ,
+                { $sort: {contagem: -1} } )
+
+// qtde de filmes por país -- retirar os elementos do vetor
+db.movie.aggregate( [
+    {$match : {countries: /bra.*il/i} } } ,
+    { $unwind: "$countries"} ,
+    {$group : {_id: {país: "$countries"} , 
+                contagem : {$count:{} } } } ,
+                { $sort: {contagem: -1} } ])
+
+// primeiro desempacota depois aplica o match
+db.movie.aggregate( 
+    { $unwind: "$countries"} ,
+    {$match : {countries: /bra.il/i} }  ,
+    {$group : {_id: {país: "$countries"} , 
+                contagem : {$count:{} } } } ,
+                { $sort: {contagem: -1} } )
+// qtde de filmes por ator/atriz depois aplica o match
+db.movie.aggregate( 
+    { $unwind: "$actors"} ,
+    // {$match : {countries: /bra.il/i} }  ,
+    {$group : {_id: {artista: "$actors"} , 
+                contagem : {$count:{} } } } ,
+                { $sort: {contagem: -1} } )
+db.movie.aggregate( 
+    { $unwind: "$actors"} ,
+    {$match : {actors: /chan/i} }  ,
+    {$group : {_id: {artista: "$actors"} , 
+                contagem : {$count:{} } } } ,
+                { $sort: {contagem: -1} } )
