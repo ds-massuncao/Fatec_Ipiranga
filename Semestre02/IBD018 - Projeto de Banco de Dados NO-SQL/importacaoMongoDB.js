@@ -48,6 +48,7 @@ doc.ano_lancamento = parseInt(doc.ano_lancamento);
 // deprecated save()
 db.movie.replaceOne({_id:doc._id},doc ) } ) ;
 
+// Criando indice
 db.movie.createIndex(
   { title: 1, ano_lancamento: -1 } ,
   { name: "titulo_ano" })
@@ -80,8 +81,8 @@ db.teste.find()
 db.teste.aggregate(
 [ { $project :
     { hoje : new Date(),
-      dia:  {$dayOfMonth: ISODate("2024-10-05T22:33:44.555Z")},
-      mês: {$month: ISODate("2024-10-05T22:33:44.555Z")}
+      dia:  {$dayOfMonth: ISODate("2025-05-05T22:33:44.555Z")},
+      mês: {$month: ISODate("2025-05-05T22:33:44.555Z")},
       hora: {$hour: new Date()},
     minuto: {$minute: new Date()},
     segundo: {$second: new Date()},
@@ -96,10 +97,11 @@ now.getTimezoneOffset()
 
 
 // diferença entre datas 
+// este comando não roda no NoSQLBooster. Tem que rodar no MongoDB Compass
 db.teste.aggregate( [
   { $project: { diferenca_dias: { $dateDiff: { startDate: ISODate("2024-08-25T00:00:00.000Z") ,
                                         endDate: ISODate("2024-09-11T00:00:00.000Z") ,
-                                          unit: "second" } } , _id: 0 } } ] )
+                                          unit: "day" } } , _id: 0 } } ] )
                                           
 db.teste.aggregate( [
   { $project: { difhoras: { $dateDiff: { startDate: ISODate("2000-12-25T00:00:00.000Z") ,
@@ -113,12 +115,13 @@ db.teste.aggregate( [
 //                                          unit: "month" } , 12 ] }}}} } ])
 // subtraindo unidades de tempo 
 db.teste.aggregate( [
-  { $project: { intervalo: { $dateSubtract:{ startDate: ISODate("2024-02-29T12:10:05Z"),
-                                             unit: "year",
+  { $project: { intervalo: { $dateSubtract:{ startDate: new Date(),
+                                             unit: "hour",
                                              amount: 10 } } } } ] ) 
 											 
 // adicionando unidades de tempo -- no SQL INTERVAL '2' HOUR
 db.teste.aggregate( [
   { $project: { intervalo: { $dateAdd:{ startDate: new Date(),
                                              unit: "hour",
+                                             amount: 2 } } } } ] ) 
 
