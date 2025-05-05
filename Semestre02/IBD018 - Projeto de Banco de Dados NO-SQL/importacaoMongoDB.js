@@ -44,7 +44,7 @@ db.movie.find({ano_lancamento:{$ne: ""}}).forEach( function (doc) {
 doc._id = doc._id ;
 doc.ano_lancamento = parseInt(doc.ano_lancamento);
 //print(doc._id); 
-print(doc.ano_lancamento)  ;
+//print(doc.ano_lancamento)  ;
 // deprecated save()
 db.movie.replaceOne({_id:doc._id},doc ) } ) ;
 
