@@ -5,7 +5,7 @@ show databases
 db.empresa.drop()
 db.empresa.insertOne( {razao_social: 'Microsoft do Brasil Ltda',
 endereco: 'Av. Engenheiro Berrini, 1000 - Brooklin - São Paulo',
-fones: [1150801000, 1150801001]  }  )deb
+fones: [1150801000, 1150801001]  }  )
 // coleções do bd
 show collections
 // consultar a coleção empresa SELECT * FROM empresa
