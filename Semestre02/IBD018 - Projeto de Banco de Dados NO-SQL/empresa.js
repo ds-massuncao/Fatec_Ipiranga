@@ -23,10 +23,10 @@ fone: 115550100}])
 db.empresa.deleteOne({ _id : ObjectId("67f3c33f28c81a7a8e1112cb") } )
 db.empresa.deleteOne({ _id : ObjectId("67f3c33f28c81a7a8e1112cc") } )
 // buscando com critérios WHERE
-db.empresa.find({ razao_social: /abc/i }) - "i" transforma em nao sensitive
+db.empresa.find({ razao_social: /abc/i }) //- "i" transforma em nao sensitive
 db.empresa.deleteOne({ _id : ObjectId("67f3c33f28c81a7a8e1112cd" ) } )
 // início de palavra
-db.empresa.find({razao_social: /^micro/i }) - "^" traz o que começa com "micro"
+db.empresa.find({razao_social: /^micro/i }) //- "^" traz o que começa com "micro"
 // cadeia de caracteres
 db.empresa.find( {razao_social : /bra*.il/i  } )
 // consultas com AND e OR 
@@ -39,7 +39,7 @@ db.empresa.find( {$or: [ {endereco:	 /s.*o paulo/i} ,
                          { "endereco.cidade":  /s.*o paulo/i } ] })
 // operador not ou diferente $not
 db.empresa.find ({$and : [ {razao_social: /ltda/i} ,
-                           {razao_social: {$not: /bra/i } } ] } ) - "$ne" para número
+                           {razao_social: {$not: /bra/i } } ] } ) //- "$ne" para número
 // atualização -novo campo ano fundação
 db.empresa.updateOne( {razao_social: /microsoft/i},
                        {$set: {ano_fundação: 1974 } })
@@ -53,8 +53,8 @@ db.empresa.find()
 // $lte (menor ou igual <=) / $gt (maior que >) / $gte (maior ou igual >=)
 db.empresa.find({ano_fundação : { $gt: 1950 }})
 // simulando um between
-db.empresa.find({ ano_fundação : { $lte: 2000 }, ano_fundação : { $gte:1950 } }) - nao funcionou
-db.empresa.find({ $and: [ { ano_fundação : { $gte: 1950 } },  - funcionou
+db.empresa.find({ ano_fundação : { $lte: 2000 }, ano_fundação : { $gte:1950 } }) //- nao funcionou
+db.empresa.find({ $and: [ { ano_fundação : { $gte: 1950 } },  //- funcionou
                                           { ano_fundação : { $lte: 2000 } } ] } )
 // manipulando vetores
 // novo numero de fone na Microsoft
