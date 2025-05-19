@@ -259,8 +259,8 @@ db.movie.find()
 
 //c)	Mostre a contagem de filmes por país e gênero, mostrando o nome dos país(es) e idiomas(s) no formato “Brazil/EUA”, “Comedy/Drama”, ou seja, transforme o conteúdo do vetor em string (tirar os elementos de dentro do vetor).
 db.movie.aggregate (
-{ $group : { _id: {pais: "$countries", genero: "$genre"},  
-              pais_genero : {$count: {} } } },
+{ $group : { _id: {pais: "$countries", genero: "$genre", idioma: "$languages"},  
+              pais_genero_idioma : {$count: {} } } },
 {$project : {
     País: {$cond : {"if" : {"$eq": [{$size: "$_id.pais" }, 1] },
                                "then":  { "$arrayElemAt"  : ["$_id.pais", 0]  },
@@ -269,21 +269,36 @@ db.movie.aggregate (
     Gênero: {$cond : {"if" : {"$eq": [{$size: "$_id.genero" }, 1] },
                                "then":  { "$arrayElemAt"  : ["$_id.genero", 0]  },
             "else": {"$concat": [ { "$arrayElemAt" : ["$_id.genero", 0]  }, "/", 
-                                  { "$arrayElemAt" : ["$_id.genero", 1]  } ] } } }, 
-              pais_genero: 1, _id: 0} },
- {$match: {pais_genero : {$lte: 50}}},
-            {$sort : { pais_genero: -1  } } )
+                                  { "$arrayElemAt" : ["$_id.genero", 1]  } ] } } } ,
+     Idioma: {$cond : {"if" : {"$eq": [{$size: "$_id.idioma" }, 1] },
+                               "then":  { "$arrayElemAt"  : ["$_id.idioma", 0]  },
+            "else": {"$concat": [ { "$arrayElemAt" : ["$_id.idioma", 0]  }, "/", 
+                                  { "$arrayElemAt" : ["$_id.idioma", 1]  } ] } } },
+              pais_genero_idioma: 1, _id: 0} },
+ {$match: {pais_genero_idioma : {$lte: 50}}},
+            {$sort : { pais_genero_idioma: -1  } } )
 
 // método 2 usando o $unwind nos dois vetores, faz a contagem correta 
 // mas perde informação de co-produção e generos combinados
 db.movie.aggregate ([
   {$unwind: "$countries"} , 
   {$unwind: "$genre"} , 
-  {$group : { _id: {pais: "$countries", genero: "$genre"},  
-              pais_genero : {$count: {} } } } , 
-  {$sort: {pais_genero: -1 } }  ) 
+  {$unwind: "$languages"} , 
+  {$group : { _id: {pais: "$countries", genero: "$genre", idioma: "$languages"},  
+              pais_genero_idioma : {$count: {} } } } , 
+  {$sort: {pais_genero_idioma: -1 } }  ) 
 
-//d)	Mostre a contagem de filmes por país e idioma.
+//d) Mostre a contagem de filmes por Diretor. Mostre o nome(s) do(s) diretor(es) quando tiverem no máximo 2.
+db.movie.aggregate ([
+  { $match: {directors: {$ne: null}}},
+  {$unwind: "$directors"},
+  { $group : { _id: {direcao: "$directors"},  
+              contagem_direcao : {$count : {} } } },
+{$match: {contagem_direcao: {$lte: 2} }}, 
+{$sort : { contagem_direcao: -1 , _id : 1}]) // ordena pela contagem depois nome do diretor
+
+
+//e)	Mostre a contagem de filmes por país e idioma.
 db.movie.aggregate ([
     {$unwind: "$countries"},
     {$unwind: "$languages"},
