@@ -1,0 +1,205 @@
+// Aula 26/maio - Manipulação de Datas
+
+//Trabalhando com datas
+// data atual
+RETURN date() AS data_atual, datetime() AS datahora_atual
+// data hora
+RETURN datetime({timezone: 'Greenwich'}) AS datahora_atual
+RETURN datetime({timezone: "America/Sao_Paulo"}) AS datahora_atual
+// extract da data hora
+RETURN datetime({timezone: "America/Sao_Paulo"}).hour AS hora_atual
+RETURN datetime({timezone: "America/Sao_Paulo"}).week AS semana_atual
+// somando 2 horas à data atual
+RETURN datetime({timezone: "America/Sao_Paulo"}) + duration({hours:2})
+
+UNWIND [
+  date('2025-10-25'),
+  date('2025-10'), // completa com dia 01
+  date('202510'),   // completa com dia 01
+  date('2025-W22-1'), // retorna semana 43, 1o dia
+  date('2025300'), // retorna dia 300
+  date('2025') // completa com 01-01
+] as Formatos_Data
+RETURN Formatos_Data
+
+
+UNWIND [
+  duration.between(date("1984-10-11"), date("1985-11-25")),
+  duration.between(date("1985-11-25"), date("1984-10-11")),
+  duration.between(date("1984-10-11"), datetime("1984-10-12T21:40:32.142+0100")),
+  duration.between(date("2015-06-24"), localtime("14:30")),
+  duration.between(localtime("14:30"), time("16:30+0100")),
+  duration.between(localdatetime("2015-07-21T21:40:32.142"), localdatetime("2016-07-21T21:45:22.142")),
+  duration.between(datetime({year: 2017, month: 10, day: 29, hour: 0, timezone: 'Europe/Stockholm'}), datetime({year: 2017, month: 10, day: 29, hour: 0, timezone: 'Europe/London'}))
+] AS aDuration
+RETURN aDuration
+
+// Aula 26 de maio - Banco IMDB Importado 
+// Tratamentos de string para número
+// Funções de Grupo - GROUP BY 
+
+// Converter altura, duração e ano lançamento para Inteiro
+MATCH (a:Artista)
+SET a.altura = toInteger(a.altura)
+RETURN a
+
+// Converter duração e ano lançamento para Inteiro
+MATCH (f:Filme)
+SET f.duração = toInteger(f.duração) ,
+f.ano_lançamento = toInteger(f.ano_lançamento)
+RETURN f
+
+// Consulta : quais os filmes em que trabalhou Jim Carrey
+MATCH (x)-[z:Elenco]->(y)
+WHERE y.nome =~ '(?i).*jim.*' 
+AND y.nome =~ '(?i).*carrey.*' 
+RETURN *
+LIMIT 10 
+
+// Consulta : quais os filmes em que trabalhou Jim Carrey
+MATCH (f)-[e:Elenco {tipo_participação: "actor"}]->(a:Artista {nome: "Jim Carrey"})
+RETURN *
+LIMIT 100
+
+// consultas usando operadores de busca START , ENDS, CONTAINS
+MATCH (f:Filme)
+WHERE toUpper(f.titulo_original) STARTS WITH 'LOVE' 
+RETURN f
+// usando regex
+MATCH (f:Filme)
+WHERE f.titulo_original =~ '(?i)^love.*'
+RETURN f
+LIMIT 15 
+
+// termina com WARS
+MATCH (f:Filme)
+WHERE toUpper(f.titulo_original) ENDS WITH 'WARS' 
+RETURN f
+LIMIT 15
+// usando regex
+MATCH (f:Filme)
+WHERE f.titulo_original =~ '(?i).*wars$'
+RETURN f
+LIMIT 15 
+
+// tem a string em qualquer posição - CONTAINS
+// artistas com nome Montenegro
+MATCH (a:Artista)
+WHERE toUpper(a.nome) CONTAINS "FORD"
+RETURN a.nome, a.local_nascto
+LIMIT 50 
+// usando regex
+MATCH (a:Artista)
+WHERE a.nome =~ '(?i).*ford.*'
+RETURN a.nome, a.local_nascto
+LIMIT 50
+
+ // Funções de Grupo : COUNT , SUM, AVG, MAX, MIN 
+// Contagem
+MATCH (a:Artista)
+RETURN COUNT(a.nome) AS Contagem
+
+// Média de altura dos artistas - isto equivale à expressão do SQL
+// SELECT COUNT(a.altura) AS Contagem, AVG(a.altura)
+// WHERE a.altura IS NOT NULL ;
+MATCH (a:Artista)
+WHERE a.altura IS NOT NULL
+RETURN COUNT(a.altura) AS Contagem, AVG(a.altura)
+
+//Contagem por altura - GROUP BY
+MATCH (a:Artista)
+WHERE a.altura IS NOT NULL
+RETURN a.altura, COUNT(a.altura) AS Contagem
+ORDER BY Contagem DESC 
+
+// Maior e menor alturas e a diferenlça entre elas
+MATCH (a:Artista)
+WHERE a.altura IS NOT NULL
+RETURN MAX(a.altura) AS Maior, MIN(a.altura) AS Menor, 
+MAX(a.altura) - MIN(a.altura)  AS Diferença
+
+// media de altura por local de nascimento
+MATCH (a:Artista)
+WHERE a.altura IS NOT NULL
+AND a.local_nascto IS NOT NULL
+RETURN a.local_nascto AS LOCAL, AVG(a.altura) AS Media, COUNT(a.altura) AS Contagem
+ORDER BY Media DESC 
+
+//quantidade de filmes por gênero - problemas porque generos é um vetor
+MATCH (f:Filme)
+WHERE f.generos IS NOT NULL
+RETURN f.generos AS Gênero, COUNT(f.titulo) AS Contagem
+ORDER BY Contagem DESC
+
+//problemas porque generos é um vetor usando UNWIND
+MATCH (f:Filme)
+WHERE f.generos IS NOT NULL
+UNWIND f.generos AS genero
+RETURN genero AS Gênero, COUNT(f.titulo) AS Contagem
+ORDER BY Contagem DESC
+
+// Tratamento para o Genero: Não é um vetor ["Comedy, Drama"]
+// considera uma string só, na verdade é um vetor com 1 elemento
+WITH ["Comedy, Drama"] as generos
+WITH [elemento in generos | split(elemento, ', ') ]  as ValorExtraido
+// RETURN ValorExtraido
+UNWIND ValorExtraido AS VetorGeneros
+// RETURN VetorGeneros
+UNWIND VetorGeneros AS genero
+RETURN genero
+
+// Voltando para a consulta original de contagem por genero
+MATCH (f:Filme)
+WHERE f.generos IS NOT NULL
+WITH (f.generos) as vetor_generos
+WITH [elemento in vetor_generos | split(elemento, ', ') ]  as GeneroExtraido
+UNWIND GeneroExtraido AS VGeneros
+UNWIND VGeneros AS genero
+RETURN genero, COUNT(*) AS Qtos_filmes_por_genero
+ORDER BY Qtos_filmes_por_genero DESC
+
+// nova consulta trazendo a qtde por país e gênero
+// Voltando para a consulta original de contagem por genero
+MATCH (f:Filme)
+WHERE f.generos IS NOT NULL AND f.país IS NOT NULL
+WITH (f.generos) as vetor_generos, (f.país) AS vetor_paises
+WITH [elemento in vetor_generos | split(elemento, ', ') ]  as GeneroExtraido,
+ [elemento in vetor_paises | split(elemento, ', ') ]  as PaísExtraido
+UNWIND GeneroExtraido AS VGeneros
+UNWIND PaísExtraido AS VPaíses
+UNWIND VGeneros AS genero
+UNWIND VPaíses AS país
+RETURN país, genero, COUNT(*) AS Qtosfilmes_país_genero
+ORDER BY Qtosfilmes_país_genero DESC
+// idem acima , mas filtrando só filmes do Brazil
+MATCH (f:Filme)
+WHERE f.generos IS NOT NULL AND f.país IS NOT NULL
+WITH (f.generos) as vetor_generos, (f.país) AS vetor_paises
+WITH [elemento in vetor_generos | split(elemento, ', ') ]  as GeneroExtraido,
+ [elemento in vetor_paises | split(elemento, ', ') ]  as PaísExtraido
+UNWIND GeneroExtraido AS VGeneros
+UNWIND PaísExtraido AS VPaíses
+UNWIND VGeneros AS genero
+UNWIND VPaíses AS país
+WITH genero AS gen, país AS p
+WHERE p =~ '(?i)Bra.*il'
+RETURN p, gen, COUNT(*) AS Qtosfilmes_país_genero
+ORDER BY Qtosfilmes_país_genero
+// No SQL seria
+// SELECT f.pais, f.genero, COUNT(*)
+// FROM filme f
+// GROUP BY f.pais, f.genero
+// ORDER BY COUNT(*) DESC ;
+
+// aplicar o group by nas arestas , contar os tipos de participação do Clint Eastwood
+MATCH (f)-[e:Elenco ]->(a)
+WHERE a.nome =~ '(?i)^clint.*' 
+AND toUpper(a.nome) ENDS WITH 'EASTWOOD'
+RETURN e.tipo_participação AS Participação, COUNT(*) AS Contagem
+LIMIT 100
+
+MATCH (f)-[e:Elenco ]->(a)
+WHERE a.nome =~ '(?i)^meryl.*' 
+AND toUpper(a.nome) ENDS WITH 'STREEP'
+RETURN e.tipo_participação AS Participação, COUNT(*) AS Contagem
+LIMIT 100

@@ -1,0 +1,131 @@
+/ ******************************************************
+//I M P O R T A Ç Ã O - importando os filmes
+// Passo 1 - Baixar os arquivos IMDb_filmes.csv, IMDb_artistas.csv, IMDb_elencos0 e elencos 1.csv do Teams
+// Passo 2 - Copiar os arquivos para o diretório import do banco ( verificar pela interface do Projects,
+// selecionar o database, e do lado direito após o botão START abrir o menu com ... (3 pontos),
+// Selecionar Open Folder -> Import. Vair abrir no Explorer a pasta para os dados da importação. Copiar os 
+// três arquivos aqui
+
+// Passo 3 - Ajustes na memória SOMENTE se necessário aumentar configuração de memória
+Ir no diretório do usuário e reconfigurar neo4j.conf
+server.memory.heap.initial_size=1256m
+server.memory.heap.max_size=2512m
+server.memory.pagecache.size=2512m
+dbms.memory.transaction.total.max=1256m
+db.memory.transaction.max=128m
+db.tx_state.memory_allocation=ON_HEAP
+
+// verificando se alterou
+CALL dbms.listConfig()
+YIELD name, value
+WHERE name STARTS WITH 'server.memory'
+RETURN name, value
+ORDER BY name
+
+// Passo 4 - Executar cada comando individualmente no prompt do bd que vai importar
+// **********************************************************
+LOAD CSV WITH HEADERS FROM "file:///IMDb_filmes.csv" AS imdbf
+FIELDTERMINATOR ','
+CREATE (:Filme {id_filme:imdbf.imdb_title_id, titulo:imdbf.title,
+titulo_original:imdbf.original_title, ano_lançamento: imdbf.year, 
+generos:imdbf.genre, duração:imdbf.duration, país:imdbf.country, 
+diretor:imdbf.director, elenco:imdbf.actors})
+
+MATCH (f:Filme {país: "Brazil"})
+RETURN f
+
+// busca pelo id do nó
+MATCH (f:Filme)
+WHERE f.id_filme =~ "tt001.*" 
+RETURN f
+
+// lembrar - transformar ano_lançamento e duração em número
+
+// Importando os atores - 297705
+LOAD CSV WITH HEADERS FROM "file:///IMDb_artistas.csv" AS imdba
+FIELDTERMINATOR ','
+CREATE (:Artista {id_ator:imdba.imdb_name_id, nome:imdba.name, altura: imdba.height, local_nascto: imdba.place_of_birth,
+dt_nascto: imdba.date_of_birth, dt_obito: imdba.date_of_death})
+
+// Willem Dafoe - 1955
+MATCH (a:Artista)
+WHERE a.nome =~ '(?i).*Willem.*'  // LIKE '%Willem%'
+RETURN a.id_ator, a.nome
+
+// antes transformando os ids para números, são strings
+MATCH (a:Artista)
+SET a.altura = toInteger(a.altura)
+RETURN a
+// tratando filme
+MATCH (f:Filme)
+SET f.ano_lançamento = toInteger(f.ano_lançamento),
+ f.duração = toInteger(f.duração)
+RETURN f
+
+// importando elenco total -- falta importar
+LOAD CSV WITH HEADERS FROM "file:///IMDb_elencos0.csv" AS imdbe
+FIELDTERMINATOR ','
+CREATE (:Elencos {id_filme:imdbe.imdb_title_id, id_ator:imdbe.imdb_name_id, participação: imdbe.category})
+
+LOAD CSV WITH HEADERS FROM "file:///IMDb_elencos1.csv" AS imdbe
+FIELDTERMINATOR ','
+CREATE (:Elencos {id_filme:imdbe.imdb_title_id, id_ator:imdbe.imdb_name_id, participação: imdbe.category})
+
+
+
+// checando id_ator e id_filme
+MATCH (f:Filme)
+RETURN f.id_filme
+
+// CRIAR INDICES antes para os ids
+// filme
+CREATE INDEX idx_idfilme FOR (f:Filme)
+ON (f.id_filme)
+CREATE INDEX idx_titfilme FOR (f:Filme)
+ON (f.titulo)
+CREATE INDEX idx_genfilme FOR (f:Filme)
+ON (f.generos)
+// artista
+CREATE INDEX idx_idartista FOR (a:Artista)
+ON (a.id_ator)
+CREATE INDEX idx_nomeartista FOR (a:Artista)
+ON (a.nome)
+// elencos  -- falta
+CREATE INDEX idx_participa FOR (e:Elencos)
+ON (e.tipo_participação)
+CREATE INDEX idx_e_idartista FOR (e:Elencos)
+ON (e.id_ator)
+CREATE INDEX idx_e_idfilme FOR (e:Elencos)
+ON (e.id_filme)
+
+// relacionando filme, ator e elenco
+// MERGE ou combina os nós existentes e os vincula, ou cria novos dados e os vincula.
+// É como uma combinação de MATCH e CREATE que, adicionalmente, permite que você especifique
+//  o que acontece se os dados foram combinados ou criados.
+/// vai criar a aresta Elenco a partir dos nós ELENCOS 
+// para os filmes tt0 em diante - > 511860	
+MATCH (f:Filme),(a:Artista),(elc:Elencos)
+WHERE f.id_filme = elc.id_filme
+AND a.id_ator = elc.id_ator
+AND f.id_filme =~ "tt0.*" 
+MERGE (f)-[e:Elenco {tipo_participação: elc.participação }]->(a)
+WITH COUNT(*) AS AFFECTED
+RETURN *
+// para os filmes que faltaram 323633
+MATCH (f:Filme),(a:Artista),(elc:Elencos)
+WHERE NOT ( f.id_filme =~ "tt0.*")
+AND f.id_filme = elc.id_filme
+AND a.id_ator = elc.id_ator
+MERGE (f)-[e:Elenco {tipo_participação: elc.participação }]->(a)
+WITH COUNT(*) AS AFFECTED
+RETURN *
+// testes para verificar se os dados forma corretamente importados
+// deu certo mas demora, pular
+// MATCH (f)-[e:Elenco]->(a)
+// RETURN f.id_filme, f.titulo, e.tipo_participação, a.id_ator, a.nome
+
+// diminuindo o escopo
+MATCH (f)-[e:Elenco]->(a)
+WHERE f.generos =~ '(?i).*sci-fi.*'
+// RETURN f.id_filme, f.titulo, e.tipo_participação, a.id_ator, a.nome
+RETURN * 
