@@ -1,28 +1,55 @@
-// Aula 26/maio - Manipulação de Datas
+// ================================================
+// ARQUIVO: manipulacao_datas_e_filmes.cypher
+// DESCRIÇÃO: Script Cypher para estudos com Neo4j
+// AUTOR: Marcos Assunção
+// DATA: 26 de maio de 2025
+// ================================================
+// RECURSOS USADOS:
+// - date(), datetime(), duration()
+// - toInteger(), split(), UNWIND
+// - WHERE com operadores de string (STARTS WITH, ENDS WITH, CONTAINS, =~)
+// - MATCH para consultas
+// - SET para atualização de propriedades
+// - funções de agregação: COUNT, AVG, MAX, MIN
+// ================================================
 
-//Trabalhando com datas
-// data atual
-RETURN date() AS data_atual, datetime() AS datahora_atual
-// data hora
-RETURN datetime({timezone: 'Greenwich'}) AS datahora_atual
-RETURN datetime({timezone: "America/Sao_Paulo"}) AS datahora_atual
-// extract da data hora
-RETURN datetime({timezone: "America/Sao_Paulo"}).hour AS hora_atual
-RETURN datetime({timezone: "America/Sao_Paulo"}).week AS semana_atual
-// somando 2 horas à data atual
-RETURN datetime({timezone: "America/Sao_Paulo"}) + duration({hours:2})
 
+////////////////////////////////////
+// 1. MANIPULAÇÃO DE DATAS E HORAS
+////////////////////////////////////
+
+// SYNTAX: date(), datetime()
+// Retorna data e hora atual do sistema
+RETURN date() AS data_atual, datetime() AS datahora_atual;
+
+// SYNTAX: datetime({timezone: '...'}) 
+// Retorna data/hora considerando fuso horário
+RETURN datetime({timezone: 'Greenwich'}) AS datahora_utc;
+RETURN datetime({timezone: "America/Sao_Paulo"}) AS datahora_sp;
+
+// SYNTAX: datetime().hour, datetime().week
+// Extrai partes da data/hora
+RETURN datetime({timezone: "America/Sao_Paulo"}).hour AS hora_atual;
+RETURN datetime({timezone: "America/Sao_Paulo"}).week AS semana_atual;
+
+// SYNTAX: + duration({units})
+// Soma 2 horas à data/hora
+RETURN datetime({timezone: "America/Sao_Paulo"}) + duration({hours:2}) AS duas_horas_mais;
+
+// SYNTAX: UNWIND + date()
+// Demonstração de diferentes formatos de data
 UNWIND [
   date('2025-10-25'),
-  date('2025-10'), // completa com dia 01
-  date('202510'),   // completa com dia 01
-  date('2025-W22-1'), // retorna semana 43, 1o dia
-  date('2025300'), // retorna dia 300
-  date('2025') // completa com 01-01
-] as Formatos_Data
-RETURN Formatos_Data
+  date('2025-10'),
+  date('202510'),
+  date('2025-W22-1'),
+  date('2025300'),
+  date('2025')
+] AS Formatos_Data
+RETURN Formatos_Data;
 
-
+// SYNTAX: duration.between(data1, data2)
+// Calcula duração entre diferentes tipos de data/hora
 UNWIND [
   duration.between(date("1984-10-11"), date("1985-11-25")),
   duration.between(date("1985-11-25"), date("1984-10-11")),
@@ -30,176 +57,177 @@ UNWIND [
   duration.between(date("2015-06-24"), localtime("14:30")),
   duration.between(localtime("14:30"), time("16:30+0100")),
   duration.between(localdatetime("2015-07-21T21:40:32.142"), localdatetime("2016-07-21T21:45:22.142")),
-  duration.between(datetime({year: 2017, month: 10, day: 29, hour: 0, timezone: 'Europe/Stockholm'}), datetime({year: 2017, month: 10, day: 29, hour: 0, timezone: 'Europe/London'}))
+  duration.between(
+    datetime({year: 2017, month: 10, day: 29, hour: 0, timezone: 'Europe/Stockholm'}),
+    datetime({year: 2017, month: 10, day: 29, hour: 0, timezone: 'Europe/London'})
+  )
 ] AS aDuration
-RETURN aDuration
+RETURN aDuration;
 
-// Aula 26 de maio - Banco IMDB Importado 
-// Tratamentos de string para número
-// Funções de Grupo - GROUP BY 
 
-// Converter altura, duração e ano lançamento para Inteiro
+///////////////////////////////////////////////////////
+// 2. CONVERSÃO DE CAMPOS: toInteger()
+///////////////////////////////////////////////////////
+
+// SYNTAX: SET propriedade = toInteger(valor)
+// Converte altura de string para número inteiro
 MATCH (a:Artista)
 SET a.altura = toInteger(a.altura)
-RETURN a
+RETURN a;
 
-// Converter duração e ano lançamento para Inteiro
+// Converte duração e ano de filmes
 MATCH (f:Filme)
-SET f.duração = toInteger(f.duração) ,
-f.ano_lançamento = toInteger(f.ano_lançamento)
-RETURN f
+SET f.duração = toInteger(f.duração),
+    f.ano_lançamento = toInteger(f.ano_lançamento)
+RETURN f;
 
-// Consulta : quais os filmes em que trabalhou Jim Carrey
+
+///////////////////////////////////////////////////////
+// 3. CONSULTAS COM FILTROS DE NOME
+///////////////////////////////////////////////////////
+
+// SYNTAX: =~ '(?i).*texto.*' → regex que ignora maiúsculas
+// Busca com expressão regular (regex)
 MATCH (x)-[z:Elenco]->(y)
-WHERE y.nome =~ '(?i).*jim.*' 
-AND y.nome =~ '(?i).*carrey.*' 
+WHERE y.nome =~ '(?i).*jim.*' AND y.nome =~ '(?i).*carrey.*'
 RETURN *
-LIMIT 10 
+LIMIT 10;
 
-// Consulta : quais os filmes em que trabalhou Jim Carrey
+// SYNTAX: MATCH direto com filtro no nome
 MATCH (f)-[e:Elenco {tipo_participação: "actor"}]->(a:Artista {nome: "Jim Carrey"})
 RETURN *
-LIMIT 100
+LIMIT 100;
 
-// consultas usando operadores de busca START , ENDS, CONTAINS
+
+/////////////////////////////////////////////////////////
+// 4. FILTROS DE TEXTO: STARTS WITH, ENDS WITH, CONTAINS
+/////////////////////////////////////////////////////////
+
+// SYNTAX: STARTS WITH
 MATCH (f:Filme)
-WHERE toUpper(f.titulo_original) STARTS WITH 'LOVE' 
-RETURN f
-// usando regex
+WHERE toUpper(f.titulo_original) STARTS WITH 'LOVE'
+RETURN f;
+
+// SYNTAX: regex que começa com (^)
 MATCH (f:Filme)
 WHERE f.titulo_original =~ '(?i)^love.*'
 RETURN f
-LIMIT 15 
+LIMIT 15;
 
-// termina com WARS
+// SYNTAX: ENDS WITH
 MATCH (f:Filme)
-WHERE toUpper(f.titulo_original) ENDS WITH 'WARS' 
+WHERE toUpper(f.titulo_original) ENDS WITH 'WARS'
 RETURN f
-LIMIT 15
-// usando regex
+LIMIT 15;
+
+// SYNTAX: regex que termina com ($)
 MATCH (f:Filme)
 WHERE f.titulo_original =~ '(?i).*wars$'
 RETURN f
-LIMIT 15 
+LIMIT 15;
 
-// tem a string em qualquer posição - CONTAINS
-// artistas com nome Montenegro
+// SYNTAX: CONTAINS
 MATCH (a:Artista)
 WHERE toUpper(a.nome) CONTAINS "FORD"
 RETURN a.nome, a.local_nascto
-LIMIT 50 
-// usando regex
+LIMIT 50;
+
+// SYNTAX: regex com .*termo.*
 MATCH (a:Artista)
 WHERE a.nome =~ '(?i).*ford.*'
 RETURN a.nome, a.local_nascto
-LIMIT 50
+LIMIT 50;
 
- // Funções de Grupo : COUNT , SUM, AVG, MAX, MIN 
-// Contagem
+
+/////////////////////////////////////////
+// 5. FUNÇÕES DE AGREGAÇÃO E AGRUPAMENTO
+/////////////////////////////////////////
+
+// SYNTAX: COUNT()
 MATCH (a:Artista)
-RETURN COUNT(a.nome) AS Contagem
+RETURN COUNT(a.nome) AS Contagem;
 
-// Média de altura dos artistas - isto equivale à expressão do SQL
-// SELECT COUNT(a.altura) AS Contagem, AVG(a.altura)
-// WHERE a.altura IS NOT NULL ;
-MATCH (a:Artista)
-WHERE a.altura IS NOT NULL
-RETURN COUNT(a.altura) AS Contagem, AVG(a.altura)
-
-//Contagem por altura - GROUP BY
+// SYNTAX: AVG() + COUNT()
 MATCH (a:Artista)
 WHERE a.altura IS NOT NULL
-RETURN a.altura, COUNT(a.altura) AS Contagem
-ORDER BY Contagem DESC 
+RETURN COUNT(a.altura) AS Contagem, AVG(a.altura) AS Media;
 
-// Maior e menor alturas e a diferenlça entre elas
+// SYNTAX: GROUP BY altura
 MATCH (a:Artista)
 WHERE a.altura IS NOT NULL
-RETURN MAX(a.altura) AS Maior, MIN(a.altura) AS Menor, 
-MAX(a.altura) - MIN(a.altura)  AS Diferença
+RETURN a.altura, COUNT(*) AS Contagem
+ORDER BY Contagem DESC;
 
-// media de altura por local de nascimento
+// SYNTAX: MAX(), MIN(), subtração de valores
 MATCH (a:Artista)
 WHERE a.altura IS NOT NULL
-AND a.local_nascto IS NOT NULL
-RETURN a.local_nascto AS LOCAL, AVG(a.altura) AS Media, COUNT(a.altura) AS Contagem
-ORDER BY Media DESC 
+RETURN MAX(a.altura) AS Maior, MIN(a.altura) AS Menor, MAX(a.altura) - MIN(a.altura) AS Diferença;
 
-//quantidade de filmes por gênero - problemas porque generos é um vetor
-MATCH (f:Filme)
-WHERE f.generos IS NOT NULL
-RETURN f.generos AS Gênero, COUNT(f.titulo) AS Contagem
-ORDER BY Contagem DESC
+// SYNTAX: GROUP BY local de nascimento
+MATCH (a:Artista)
+WHERE a.altura IS NOT NULL AND a.local_nascto IS NOT NULL
+RETURN a.local_nascto AS Local, AVG(a.altura) AS Media, COUNT(*) AS Contagem
+ORDER BY Media DESC;
 
-//problemas porque generos é um vetor usando UNWIND
-MATCH (f:Filme)
-WHERE f.generos IS NOT NULL
-UNWIND f.generos AS genero
-RETURN genero AS Gênero, COUNT(f.titulo) AS Contagem
-ORDER BY Contagem DESC
 
-// Tratamento para o Genero: Não é um vetor ["Comedy, Drama"]
-// considera uma string só, na verdade é um vetor com 1 elemento
-WITH ["Comedy, Drama"] as generos
-WITH [elemento in generos | split(elemento, ', ') ]  as ValorExtraido
-// RETURN ValorExtraido
+///////////////////////////////////////////////////////
+// 6. ANÁLISE DE GÊNEROS: SPLIT, UNWIND e GROUP BY
+///////////////////////////////////////////////////////
+
+// SYNTAX: SPLIT(string, separador), UNWIND
+WITH ["Comedy, Drama"] AS generos
+WITH [elemento IN generos | split(elemento, ', ')] AS ValorExtraido
 UNWIND ValorExtraido AS VetorGeneros
-// RETURN VetorGeneros
 UNWIND VetorGeneros AS genero
-RETURN genero
+RETURN genero;
 
-// Voltando para a consulta original de contagem por genero
+// SYNTAX: UNWIND para vetores de gêneros e agregação
 MATCH (f:Filme)
 WHERE f.generos IS NOT NULL
-WITH (f.generos) as vetor_generos
-WITH [elemento in vetor_generos | split(elemento, ', ') ]  as GeneroExtraido
-UNWIND GeneroExtraido AS VGeneros
-UNWIND VGeneros AS genero
+WITH [elemento IN f.generos | split(elemento, ', ')] AS GeneroExtraido
+UNWIND GeneroExtraido AS VG
+UNWIND VG AS genero
 RETURN genero, COUNT(*) AS Qtos_filmes_por_genero
-ORDER BY Qtos_filmes_por_genero DESC
+ORDER BY Qtos_filmes_por_genero DESC;
 
-// nova consulta trazendo a qtde por país e gênero
-// Voltando para a consulta original de contagem por genero
+// SYNTAX: GROUP BY país e gênero (com SPLIT e UNWIND)
 MATCH (f:Filme)
 WHERE f.generos IS NOT NULL AND f.país IS NOT NULL
-WITH (f.generos) as vetor_generos, (f.país) AS vetor_paises
-WITH [elemento in vetor_generos | split(elemento, ', ') ]  as GeneroExtraido,
- [elemento in vetor_paises | split(elemento, ', ') ]  as PaísExtraido
-UNWIND GeneroExtraido AS VGeneros
-UNWIND PaísExtraido AS VPaíses
-UNWIND VGeneros AS genero
-UNWIND VPaíses AS país
-RETURN país, genero, COUNT(*) AS Qtosfilmes_país_genero
-ORDER BY Qtosfilmes_país_genero DESC
-// idem acima , mas filtrando só filmes do Brazil
+WITH [split IN f.generos | split(split, ', ')] AS GeneroExtraido,
+     [split IN f.país | split(split, ', ')] AS PaisExtraido
+UNWIND GeneroExtraido AS VG
+UNWIND PaisExtraido AS VP
+UNWIND VG AS genero
+UNWIND VP AS pais
+RETURN pais, genero, COUNT(*) AS Qtosfilmes_por_pais_genero
+ORDER BY Qtosfilmes_por_pais_genero DESC;
+
+// SYNTAX: filtro por país com regex '(?i)bra.*'
 MATCH (f:Filme)
 WHERE f.generos IS NOT NULL AND f.país IS NOT NULL
-WITH (f.generos) as vetor_generos, (f.país) AS vetor_paises
-WITH [elemento in vetor_generos | split(elemento, ', ') ]  as GeneroExtraido,
- [elemento in vetor_paises | split(elemento, ', ') ]  as PaísExtraido
-UNWIND GeneroExtraido AS VGeneros
-UNWIND PaísExtraido AS VPaíses
-UNWIND VGeneros AS genero
-UNWIND VPaíses AS país
-WITH genero AS gen, país AS p
-WHERE p =~ '(?i)Bra.*il'
-RETURN p, gen, COUNT(*) AS Qtosfilmes_país_genero
-ORDER BY Qtosfilmes_país_genero
-// No SQL seria
-// SELECT f.pais, f.genero, COUNT(*)
-// FROM filme f
-// GROUP BY f.pais, f.genero
-// ORDER BY COUNT(*) DESC ;
+WITH [split IN f.generos | split(split, ', ')] AS GeneroExtraido,
+     [split IN f.país | split(split, ', ')] AS PaisExtraido
+UNWIND GeneroExtraido AS VG
+UNWIND PaisExtraido AS VP
+UNWIND VG AS genero
+UNWIND VP AS pais
+WITH genero AS gen, pais AS p
+WHERE p =~ '(?i)bra.*'
+RETURN p, gen, COUNT(*) AS Qtosfilmes_por_pais_genero
+ORDER BY Qtosfilmes_por_pais_genero DESC;
 
-// aplicar o group by nas arestas , contar os tipos de participação do Clint Eastwood
-MATCH (f)-[e:Elenco ]->(a)
-WHERE a.nome =~ '(?i)^clint.*' 
-AND toUpper(a.nome) ENDS WITH 'EASTWOOD'
-RETURN e.tipo_participação AS Participação, COUNT(*) AS Contagem
-LIMIT 100
 
-MATCH (f)-[e:Elenco ]->(a)
-WHERE a.nome =~ '(?i)^meryl.*' 
-AND toUpper(a.nome) ENDS WITH 'STREEP'
+////////////////////////////////////////////////
+// 7. AGRUPAMENTO POR PARTICIPAÇÃO NO ELENCO
+////////////////////////////////////////////////
+
+// SYNTAX: agrupamento por tipo_participação
+MATCH (f)-[e:Elenco]->(a)
+WHERE a.nome =~ '(?i)^clint.*' AND toUpper(a.nome) ENDS WITH 'EASTWOOD'
 RETURN e.tipo_participação AS Participação, COUNT(*) AS Contagem
-LIMIT 100
+LIMIT 100;
+
+MATCH (f)-[e:Elenco]->(a)
+WHERE a.nome =~ '(?i)^meryl.*' AND toUpper(a.nome) ENDS WITH 'STREEP'
+RETURN e.tipo_participação AS Participação, COUNT(*) AS Contagem
+LIMIT 100;
